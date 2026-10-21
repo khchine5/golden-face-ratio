@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Face Ratio — measure your facial proportions</title>
+<meta name="description" content="A free, private browser tool that detects 468 facial landmarks and measures ten facial proportions against the golden ratio. Runs entirely on your device.">
+<style>
+  :root{
+    --paper:#f7f3ea; --paper-2:#fffdf7; --ink:#201d18; --ink-2:#4d473c; --ink-3:#837a6a;
+    --gold:#a97c1d; --gold-2:#c99b34; --gold-wash:#f4ead3; --line:#e3d9c4; --line-2:#efe7d6;
+    --ok:#3f7d3f; --warn:#a97c1d; --bad:#a33a32; --shadow:0 1px 2px rgba(40,32,16,.06),0 12px 32px rgba(40,32,16,.07);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:16px/1.65 Georgia,'Iowan Old Style','Times New Roman',serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+  .sans{font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+
+  /* ---------- top bar ---------- */
+  .top{
+    position:sticky; top:0; z-index:40; background:rgba(247,243,234,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+  }
+  .top .wrap{display:flex; align-items:center; gap:26px; height:62px}
+  .brand{display:flex; align-items:baseline; gap:9px; font-size:19px; letter-spacing:.2px; white-space:nowrap}
+  .brand b{font-weight:600}
+  .brand .phi{color:var(--gold); font-size:22px; line-height:1}
+  .brand small{font:11px/1 system-ui,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+  .topnav{margin-left:auto; display:flex; gap:22px; font:14px/1 system-ui,sans-serif}
+  .topnav a{color:var(--ink-2); text-decoration:none; padding:6px 0; border-bottom:1px solid transparent}
+  .topnav a:hover{color:var(--ink); border-color:var(--gold-2)}
+  .topnav a.cta{
+    background:var(--ink); color:var(--paper-2); padding:9px 16px; border-radius:999px; border:0;
+  }
+  .topnav a.cta:hover{background:var(--gold); color:#fff}
+
+  @media (max-width:860px){
+    .top .wrap{height:auto; padding:11px 24px; flex-wrap:wrap; gap:10px 16px}
+    .topnav{margin-left:0; width:100%; flex-wrap:wrap; gap:10px 18px}
+    .topnav a.cta{margin-left:auto}
+  }
+  @media (max-width:560px){
+    .brand small{display:none}
+    .topnav{gap:8px 14px; font-size:13px}
+    .topnav a{padding:5px 0}
+    .topnav a[href="#measure"], .topnav a[href="#evidence"]{display:none}
+  }
+
+  /* ---------- hero ---------- */
+  .hero{padding:72px 0 56px; text-align:center; position:relative; overflow:hidden}
+  .hero::before{
+    content:'φ'; position:absolute; top:-70px; left:50%; transform:translateX(-50%);
+    font-size:420px; line-height:1; color:var(--gold-wash); z-index:-1; font-style:italic;
+  }
+  .eyebrow{
+    font:11px/1 system-ui,sans-serif; letter-spacing:.22em; text-transform:uppercase; color:var(--gold);
+  }
+  .hero h1{
+    font-size:clamp(34px,5.4vw,58px); line-height:1.08; font-weight:600; margin:16px 0 18px;
+    letter-spacing:-.4px; max-width:17ch; margin-inline:auto;
+  }
+  .hero h1 em{font-style:italic; color:var(--gold)}
+  .hero p.lede{max-width:60ch; margin:0 auto 26px; color:var(--ink-2); font-size:18px}
+  .hero .row{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:30px}
+  .btn{
+    display:inline-block; font:15px/1 system-ui,sans-serif; text-decoration:none; cursor:pointer;
+    padding:14px 24px; border-radius:999px; border:1px solid var(--ink); background:var(--ink); color:var(--paper-2);
+  }
+  .btn:hover{background:var(--gold); border-color:var(--gold)}
+  .btn.ghost{background:transparent; color:var(--ink); border-color:var(--line)}
+  .btn.ghost:hover{background:var(--gold-wash); border-color:var(--gold-2); color:var(--ink)}
+  .chips{display:flex; gap:26px; justify-content:center; flex-wrap:wrap; font:13px/1.4 system-ui,sans-serif; color:var(--ink-3)}
+  .chips span b{color:var(--ink); font-weight:600}
+
+  /* ---------- sections ---------- */
+  section.band{padding:66px 0; border-top:1px solid var(--line)}
+  .band.alt{background:var(--paper-2)}
+  .shead{max-width:70ch; margin-bottom:38px}
+  .shead h2{font-size:clamp(26px,3.4vw,36px); line-height:1.15; font-weight:600; margin-bottom:12px; letter-spacing:-.2px}
+  .shead p{color:var(--ink-2); font-size:17px}
+  .kicker{font:11px/1 system-ui,sans-serif; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); display:block; margin-bottom:12px}
+
+  /* ---------- analyzer ---------- */
+  .analyzer-grid{display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:34px; align-items:start}
+  @media (max-width:920px){ .analyzer-grid{grid-template-columns:1fr} }
+  .stage{
+    position:relative; overflow:hidden; background:#efe7d7; border:1px solid var(--line);
+    border-radius:18px; box-shadow:var(--shadow); aspect-ratio:1/1; width:100%; max-width:600px; margin-inline:auto;
+  }
+  canvas{
+    display:none; position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover;   /* bitmap matches the box; cover only guards a stale size */
+    z-index:1;
+  }
+  .drop{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:8px; text-align:center; color:var(--ink-2); cursor:pointer; padding:24px;
+  }
+  .drop .glyph{
+    width:64px; height:64px; border-radius:50%; border:1px dashed var(--gold-2); color:var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:6px;
+  }
+  .drop b{color:var(--ink)}
+  .drop span{font:13px/1.5 system-ui,sans-serif; color:var(--ink-3)}
+  .drop:hover{background:rgba(255,253,247,.6)}
+  .loading{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); white-space:nowrap; z-index:2;
+    font:14px/1 system-ui,sans-serif; color:var(--ink-2); background:rgba(255,253,247,.9);
+    padding:10px 16px; border-radius:999px; border:1px solid var(--line);
+  }
+  .spin{display:inline-block; width:14px; height:14px; border:2px solid var(--line-2);
+    border-top-color:var(--gold); border-radius:50%; animation:sp .8s linear infinite;
+    vertical-align:-2px; margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .stage-note{
+    max-width:600px; margin:14px auto 0; text-align:center; font:13px/1.6 system-ui,sans-serif; color:var(--ink-3);
+  }
+
+  .panel{display:flex; flex-direction:column; gap:16px}
+  .card{background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:var(--shadow)}
+  .card h3{
+    font:11px/1 system-ui,sans-serif; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+    margin-bottom:14px; font-weight:600;
+  }
+  .controls{display:flex; gap:10px}
+  .controls button{
+    flex:1; font:14px/1 system-ui,sans-serif; padding:13px 16px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--line); background:var(--paper-2); color:var(--ink);
+  }
+  .controls button:hover{border-color:var(--gold-2)}
+  .controls button.primary{background:var(--ink); border-color:var(--ink); color:var(--paper-2)}
+  .controls button.primary:hover{background:var(--gold); border-color:var(--gold)}
+
+  .score-top{display:flex; align-items:baseline; gap:10px}
+  .bignum{font-size:52px; line-height:1; font-weight:600; color:var(--gold); font-variant-numeric:tabular-nums}
+  .scorelab{font:12px/1.4 system-ui,sans-serif; color:var(--ink-3); max-width:19ch}
+  .meter{height:6px; background:var(--line-2); border-radius:3px; overflow:hidden; margin:16px 0 12px}
+  .meter i{display:block; height:100%; width:0%; transition:width .7s ease; background:var(--gold)}
+  .note{font:14px/1.6 system-ui,sans-serif; color:var(--ink-2)}
+  .verdict{
+    font:15px/1.6 system-ui,sans-serif; color:var(--ink); border-left:2px solid var(--gold-2);
+    padding:4px 0 4px 14px; margin-top:14px;
+  }
+
+  .ratio{padding:11px 0; border-top:1px solid var(--line-2)}
+  .ratio:first-child{border-top:0; padding-top:0}
+  .rhead{display:flex; justify-content:space-between; align-items:baseline; gap:12px; font:14px/1.4 system-ui,sans-serif}
+  .rhead .val{font-variant-numeric:tabular-nums; color:var(--ink-3); white-space:nowrap; font-size:13px}
+  .rhead .val b{font-weight:600}
+  .rbar{height:3px; background:var(--line-2); border-radius:2px; margin-top:6px; overflow:hidden}
+  .rbar i{display:block; height:100%; width:0%; transition:width .6s ease}
+  .rnote{font:12.5px/1.5 system-ui,sans-serif; color:var(--ink-3); margin-top:5px}
+
+  .legend{font:13px/1.8 system-ui,sans-serif; color:var(--ink-2)}
+  .legend b{color:var(--ink); font-weight:600}
+  .toggle{display:flex; align-items:center; gap:9px; font:13px/1 system-ui,sans-serif; color:var(--ink-2); cursor:pointer; margin-top:9px}
+  .toggle input{accent-color:var(--gold)}
+
+  .samples{display:grid; grid-template-columns:repeat(10,1fr); gap:8px}
+  @media (max-width:700px){ .samples{grid-template-columns:repeat(5,1fr)} }
+  .samples img{
+    width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; border:2px solid transparent;
+    cursor:pointer; opacity:.9; background:var(--line-2);
+    transition:border-color .15s, opacity .15s, transform .15s;
+  }
+  .samples img:hover{opacity:1; transform:translateY(-2px)}
+  .samples img.sel{border-color:var(--gold); opacity:1}
+  .hint{font:12px/1.6 system-ui,sans-serif; color:var(--ink-3); margin-top:12px}
+
+  /* ---------- measure cards ---------- */
+  .grid-3{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px}
+  .mcard{background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:20px}
+  .mcard .t{font:12px/1 system-ui,sans-serif; letter-spacing:.1em; text-transform:uppercase; color:var(--gold)}
+  .mcard h4{font-size:19px; font-weight:600; margin:10px 0 8px}
+  .mcard p{font:14px/1.6 system-ui,sans-serif; color:var(--ink-2)}
+  .mcard .target{
+    display:inline-block; margin-top:12px; font:12px/1 system-ui,sans-serif; color:var(--ink-3);
+    border:1px solid var(--line); border-radius:999px; padding:6px 11px; background:var(--paper);
+  }
+  .mcard .target b{color:var(--ink)}
+
+  /* ---------- timeline ---------- */
+  .timeline{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:0; border-top:1px solid var(--line)}
+  .tl{padding:22px 22px 22px 0; border-right:1px solid var(--line-2)}
+  .tl:last-child{border-right:0}
+  .tl .yr{font:13px/1 system-ui,sans-serif; color:var(--gold); letter-spacing:.08em}
+  .tl h4{font-size:17px; font-weight:600; margin:9px 0 7px}
+  .tl p{font:13.5px/1.6 system-ui,sans-serif; color:var(--ink-2)}
+
+  /* ---------- evidence ---------- */
+  .prose{max-width:74ch}
+  .prose p{font-size:17px; line-height:1.75; color:var(--ink-2); margin-bottom:20px}
+  .prose p strong{color:var(--ink)}
+  .prose p em{font-style:italic}
+  .pull{
+    border-left:3px solid var(--gold); padding:6px 0 6px 22px; margin:30px 0;
+    font-size:21px; line-height:1.5; color:var(--ink); font-style:italic;
+  }
+  .study{
+    background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:22px 24px; margin-bottom:18px;
+  }
+  .study h4{font-size:19px; font-weight:600; margin-bottom:8px}
+  .study .who{font:12px/1.4 system-ui,sans-serif; color:var(--gold); letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px}
+  .study p{font:15px/1.7 system-ui,sans-serif; color:var(--ink-2)}
+  .study p + p{margin-top:10px}
+  .tag{
+    display:inline-block; font:11px/1 system-ui,sans-serif; letter-spacing:.08em; text-transform:uppercase;
+    padding:5px 9px; border-radius:4px; margin-bottom:12px;
+  }
+  .tag.mix{background:#f7ecd5; color:#8a6414}
+  .tag.no{background:#f4e0dc; color:#8f332b}
+  .tag.yes{background:#e2efdf; color:#35692f}
+
+  .refs{columns:2; column-gap:40px; margin-top:8px}
+  @media (max-width:760px){ .refs{columns:1} }
+  .refs li{
+    break-inside:avoid; margin-bottom:14px; list-style:none; font:13.5px/1.6 system-ui,sans-serif; color:var(--ink-2);
+    padding-left:26px; position:relative;
+  }
+  .refs li::before{content:counter(r); counter-increment:r; position:absolute; left:0; top:0; color:var(--gold); font-size:12px}
+  .refs{counter-reset:r}
+  .refs li em{font-style:italic; color:var(--ink)}
+  .refs a{color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold-wash)}
+  .refs a:hover{border-color:var(--gold)}
+
+  /* ---------- faq ---------- */
+  details.faq{border-bottom:1px solid var(--line-2); padding:18px 0}
+  details.faq summary{
+    cursor:pointer; font-size:18px; font-weight:600; list-style:none; display:flex; justify-content:space-between; gap:20px;
+  }
+  details.faq summary::-webkit-details-marker{display:none}
+  details.faq summary::after{content:'+'; color:var(--gold); font-weight:400; font-size:22px; line-height:1}
+  details.faq[open] summary::after{content:'–'}
+  details.faq p{font:15px/1.7 system-ui,sans-serif; color:var(--ink-2); margin-top:12px; max-width:76ch}
+
+  .closing{
+    text-align:center; max-width:62ch; margin:0 auto; font-size:18px; color:var(--ink-2);
+  }
+  .closing b{color:var(--ink)}
+
+  footer{border-top:1px solid var(--line); padding:34px 0 46px; font:13px/1.8 system-ui,sans-serif; color:var(--ink-3)}
+  footer .wrap{display:flex; gap:30px; flex-wrap:wrap; justify-content:space-between}
+  footer b{color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><span class="phi">&#966;</span><b>Golden Face Ratio</b><small>proportion lab</small></div>
+    <nav class="topnav">
+      <a href="#analyze">Analyze</a>
+      <a href="#measure">What we measure</a>
+      <a href="#evidence">The evidence</a>
+      <a href="#faq">FAQ</a>
+      <a class="cta" href="#analyze">Try your photo</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Facial proportion analysis</span>
+    <h1>How close is your face to the <em>golden ratio</em>?</h1>
+    <p class="lede">
+      The golden ratio, phi (1.618), has been credited with everything from the Parthenon to the
+      layout of this page. Drop in a photo and we will measure ten of the proportions artists and
+      orthodontists have argued about for two thousand years &mdash; and tell you, honestly, where
+      you land.
+    </p>
+    <div class="row">
+      <a class="btn" href="#analyze">Analyze a photo</a>
+      <a class="btn ghost" href="#evidence">Read what the research says</a>
+    </div>
+    <div class="chips">
+      <span><b>100%</b> private &mdash; runs in your browser</span>
+      <span><b>468</b> facial landmarks</span>
+      <span><b>10</b> proportions measured</span>
+      <span><b>No</b> signup, no account</span>
+    </div>
+  </div>
+</header>
+
+<section class="band" id="analyze">
+  <div class="wrap">
+    <div class="analyzer-grid">
+      <div>
+        <div class="stage" id="stage">
+          <div class="drop" id="drop">
+            <div class="glyph">&#9670;</div>
+            <b>Click to choose a photo</b>
+            <span>or drag &amp; drop one here &mdash; front-facing photos work best</span>
+          </div>
+          <div class="loading" id="loading" style="display:none"></div>
+          <canvas id="canvas"></canvas>
+        </div>
+        <p class="stage-note">
+          The frame crops itself around your face so nothing important falls off the edge.
+          Nothing is uploaded: the model and your photo stay on this device.
+        </p>
+      </div>
+
+      <div class="panel">
+        <div class="controls">
+          <button class="primary" id="pickBtn">Upload photo</button>
+          <button id="resetBtn" style="display:none">New photo</button>
+        </div>
+
+        <div class="card" id="scoreCard" style="display:none">
+          <h3>Harmony score</h3>
+          <div class="score-top">
+            <div class="bignum" id="scoreNum">--</div>
+            <div class="scorelab">How closely the ten proportions sit on their targets</div>
+          </div>
+          <div class="meter"><i id="scoreBar"></i></div>
+          <div class="note">
+            100% means every ratio is exactly on target; a ratio that is 50% off counts as zero. This is a
+            geometric snapshot, not a beauty grade &mdash; see <a href="#evidence">the evidence</a>.
+          </div>
+          <div class="verdict" id="verdict"></div>
+        </div>
+
+        <div class="card" id="resCard" style="display:none">
+          <h3>Measurements</h3>
+          <div id="ratios"></div>
+        </div>
+
+        <div class="card" id="legendCard" style="display:none">
+          <h3>Overlay</h3>
+          <div class="legend">
+            <b>Gold line</b> &mdash; centre axis<br>
+            <b>Dashed gold</b> &mdash; brow and nose base (the mid/lower face split)<br>
+            <b>Solid gold</b> &mdash; phi lines (38.2% / 61.8%)<br>
+            <b>Dim verticals</b> &mdash; facial fifths<br>
+            <b>Dim horizontal</b> &mdash; nose and mouth width
+          </div>
+          <label class="toggle"><input type="checkbox" id="maskTgl" checked> Show grid</label>
+          <label class="toggle"><input type="checkbox" id="outlineTgl" checked> Show face outline</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:30px">
+      <h3>Or try one of twenty strangers</h3>
+      <div class="samples" id="samples"></div>
+      <p class="hint">20 portraits from the CelebA-HQ dataset (public Hugging Face mirror). Click any of them to run the full analysis.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="measure">
+  <div class="wrap">
+    <div class="shead">
+      <span class="kicker">The method</span>
+      <h2>Ten proportions, measured the old way &mdash; but with the same eyes on every face</h2>
+      <p>
+        A ruler on a printed photo gives you different numbers twice. We detect 468 landmarks on
+        your face, correct for the tilt of your head using the eye line, and measure each
+        proportion in source-image pixels. Same photo in, same numbers out.
+      </p>
+    </div>
+    <div class="grid-3" id="measureGrid"></div>
+  </div>
+</section>
+
+<section class="band" id="idea">
+  <div class="wrap">
+    <div class="shead">
+      <span class="kicker">Where the number comes from</span>
+      <h2>Why anyone thought a face should follow a rule</h2>
+      <p>
+        Euclid described the proportion around 300 BC as a curiosity in geometry. Everything after
+        that is a story about what that number was supposed to mean for people.
+      </p>
+    </div>
+    <div class="timeline">
+      <div class="tl">
+        <div class="yr">c. 300 BC</div>
+        <h4>Euclid</h4>
+        <p>Defines the &ldquo;extreme and mean ratio&rdquo; in the <em>Elements</em>. Pure geometry &mdash; no talk of beauty at all.</p>
+      </div>
+      <div class="tl">
+        <div class="yr">1202</div>
+        <h4>Fibonacci</h4>
+        <p>Publishes the rabbit sequence. The ratio of consecutive terms converges on 1.618, giving the ratio a name and a foothold in nature.</p>
+      </div>
+      <div class="tl">
+        <div class="yr">1509</div>
+        <h4>Pacioli &amp; da Vinci</h4>
+        <p><em>De Divina Proportione</em> ties the ratio to the human body and to composition, illustrated by Leonardo.</p>
+      </div>
+      <div class="tl">
+        <div class="yr">1528</div>
+        <h4>D&uuml;rer</h4>
+        <p><em>Four Books on Human Proportion</em> measures real people rather than idealised ones &mdash; and finds the ratio showing up often.</p>
+      </div>
+      <div class="tl">
+        <div class="yr">1865&ndash;76</div>
+        <h4>Fechner</h4>
+        <p>Asks whether the golden section has any claim on taste, then runs the first experiments on aesthetic preference: people choose between rectangles of different shapes. The golden rectangle wins, often.</p>
+      </div>
+      <div class="tl">
+        <div class="yr">Today</div>
+        <h4>Landmark models</h4>
+        <p>Google&rsquo;s MediaPipe finds 468 points on a face in milliseconds, which makes the whole argument measurable &mdash; and testable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="evidence">
+  <div class="wrap">
+    <div class="shead">
+      <span class="kicker">The evidence</span>
+      <h2>What the research actually says about golden ratios and faces</h2>
+      <p>
+        Here is the short version, with the sources at the bottom of the section. We would rather
+        you know where the evidence is thin than get a beautiful number and a false story.
+      </p>
+    </div>
+
+    <div class="prose">
+      <p>
+        The story usually starts with Fechner. He raised the question in 1865, and by 1876 he was
+        showing people rectangles and asking which they preferred; the golden rectangle came out on
+        top often enough to look like a law of taste. A century and a half later, in 1995, <strong>Christopher Green</strong> went back
+        through the entire literature and reached a more careful conclusion: there probably is a
+        real psychological effect attached to the golden section, but it is sensitive to sloppy
+        methods. It survives careful work and evaporates under careless work. That single sentence
+        is the fairest summary of the field.
+      </p>
+      <p>
+        When the question moves from rectangles to faces, the evidence gets messier, and the
+        popular story gets thinner.
+      </p>
+    </div>
+
+    <div class="study">
+      <span class="tag mix">Mixed evidence</span>
+      <h4>The golden ratio is not the number that flatters a face</h4>
+      <div class="who">Pallett, Link &amp; Lee (2010)</div>
+      <p>
+        These researchers asked a sharper question than &ldquo;does phi work&rdquo;: for a given
+        face, is there one spacing of the features that flatters it? Across four experiments, yes
+        &mdash; but the winning numbers were not the classical ones. Attractiveness peaked when the
+        distance from the eyes to the mouth was about <strong>36% of face length</strong>, and when
+        the distance between the eyes was about <strong>46% of face width</strong>. Both differ
+        significantly from the 0.38 the golden section predicts.
+      </p>
+      <p>
+        Their new ratios match an average face, which points at a result that has been robust for
+        decades: composite faces, built by averaging many real ones, tend to be rated more
+        attractive than the individuals they came from. &ldquo;Attractive faces are only average&rdquo;
+        was the title of the 1990 paper that established it.
+      </p>
+    </div>
+
+    <div class="study">
+      <span class="tag mix">Mixed evidence</span>
+      <h4>Proportion explains surprisingly little</h4>
+      <div class="who">Kiekens et al. (2008) &middot; Rossetti et al. (2013) &middot; Zwahlen et al. (2022)</div>
+      <p>
+        In adolescents, Kiekens and colleagues tested nineteen candidate golden proportions
+        against beauty ratings. Only four of the nineteen correlated with the ratings, and together
+        they accounted for about 16% of the variance &mdash; which the authors themselves called too
+        small to matter clinically.
+      </p>
+      <p>
+        A 2013 study went further and used 3D stereophotogrammetry, the gold standard for facial
+        anthropometry, on 400 people, then compared ten ratios with 1.618. Seven of the ten came out
+        statistically different from the golden value, and none of the ratios tracked how attractive
+        a panel of dental professionals judged the face to be. A 2022 study in Hong Kong Chinese
+        faces reached a similar conclusion: most &ldquo;ideal&rdquo; measurements differed
+        significantly from the recommended targets, and only a handful of parameters actually
+        tracked attractiveness ratings.
+      </p>
+    </div>
+
+    <div class="study">
+      <span class="tag no">The popular version fails</span>
+      <h4>The &ldquo;phi mask&rdquo; does not describe an ideal face</h4>
+      <div class="who">Holland (2008)</div>
+      <p>
+        The most widely reproduced version of the golden-ratio face is Stephen Marquardt&rsquo;s
+        phi mask, a face outline drawn from the ratio in the early 2000s. It is handsome, it is
+        everywhere, and it does not hold up. Holland checked the fit properly, using Procrustes
+        analysis rather than the eyeballing the mask was usually judged by, and found the mask
+        describes the proportions of <strong>masculinised white female fashion models</strong> far
+        better than any other group. It fits sub-Saharan African and East Asian faces poorly, and
+        its proportions run against what most people actually prefer.
+      </p>
+    </div>
+
+    <div class="study">
+      <span class="tag no">No clear link</span>
+      <h4>Systematic reviews keep landing on the same uncomfortable answer</h4>
+      <div class="who">Londono et al. (2024)</div>
+      <p>
+        A 2024 systematic review in the <em>Journal of Prosthetic Dentistry</em> searched
+        PubMed, Web of Science, Embase, Scopus and the Cochrane database for work on the golden
+        proportion in natural facial esthetics. Its conclusion: <strong>no significant association
+        was found between the golden ratio and facial evaluation scores across ethnicities.</strong>
+        Other cross-population work &mdash; Malaysian and multiracial samples &mdash; finds the
+        same thing: the proportions that count as &ldquo;golden&rdquo; shift with the population
+        you measure.
+      </p>
+    </div>
+
+    <div class="prose" style="margin-top:34px">
+      <div class="pull">
+        Proportion is one input among several. Symmetry, averageness, youthfulness cues and
+        sex-specific shape all contribute &mdash; and none of them is a formula.
+      </div>
+      <p>
+        The more useful literature is not about the golden ratio at all. It is about what people
+        actually respond to: faces close to the population average, faces that are bilaterally
+        symmetric, faces with the shape and colouring associated with health and youth. Even that
+        literature is careful with its claims. Perrett and colleagues showed that the &ldquo;average
+        face&rdquo; is attractive but not optimally attractive, and that preferences shift
+        between cultures and between sexes. Work on how attractiveness is computed from
+        photographs has found that low-level image properties &mdash; the kind of thing you get
+        from lighting and sharpening &mdash; move ratings on their own, with no change to the
+        geometry whatsoever.
+      </p>
+      <p>
+        <strong>So what is this tool for?</strong> It measures proportions consistently and shows
+        you the numbers, which is a genuinely useful thing to do with a face: it turns a vague
+        sense of &ldquo;balanced?&rdquo; into specific distances you can reason about. It is not a
+        verdict, and it was never validated as a beauty scale. The score here is our own
+        arithmetic, tuned so that a face with every ratio exactly on target scores 100 and a face
+        that is 50% off on every ratio scores 0. Real faces cluster in the middle, and that is
+        what you should expect.
+      </p>
+    </div>
+
+    <h3 style="font:600 13px/1 system-ui,sans-serif; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); margin:44px 0 18px">
+      References
+    </h3>
+    <ol class="refs">
+      <li>Fechner, G. T. (1865). <em>On the question of the golden section</em>. <em>Archiv f&uuml;r zeichnende K&uuml;nste</em>, 11, 100&ndash;112. (Expanded in <em>Vorschule der &Auml;sthetik</em>, 1876.)</li>
+      <li>Green, C. D. (1995). All that glitters: A review of psychological research on the aesthetics of the golden section. <em>Perception</em>, 24(8), 937&ndash;968. <a href="https://doi.org/10.1068/p240937" target="_blank" rel="noopener">doi:10.1068/p240937</a></li>
+      <li>Langlois, J. H., &amp; Roggman, L. A. (1990). Attractive faces are only average. <em>Psychological Science</em>, 1(2), 115&ndash;121. <a href="https://doi.org/10.1111/j.1467-9280.1990.tb00079.x" target="_blank" rel="noopener">doi:10.1111/j.1467-9280.1990.tb00079.x</a></li>
+      <li>Perrett, D. I., May, K. A., &amp; Yoshikawa, S. (1994). Facial shape and judgements of female attractiveness. <em>Nature</em>, 368, 239&ndash;242. <a href="https://doi.org/10.1038/368239a0" target="_blank" rel="noopener">doi:10.1038/368239a0</a></li>
+      <li>Little, A. C., Jones, B. C., &amp; DeBruine, L. M. (2005). Facial attractiveness: Evolutionary based research. <em>Philosophical Transactions of the Royal Society B</em>, 360(1448), 1638&ndash;1659.</li>
+        <li>Jones, B. C., DeBruine, L. M., &amp; Little, A. C. (2007). The role of symmetry in attraction to average faces. <em>Perception &amp; Psychophysics</em>, 69(8), 1273&ndash;1277. <a href="https://doi.org/10.3758/BF03192944" target="_blank" rel="noopener">doi:10.3758/BF03192944</a></li>
+        <li>Marquardt, S. R. (2002). Marquardt on the golden decagon and human facial beauty: Interview by Dr. Gottlieb. <em>Journal of Clinical Orthodontics</em>, 36(6), 339&ndash;347. (PMID 12101544.)</li>
+      <li>Holland, E. (2008). Marquardt&rsquo;s phi mask: Pitfalls of relying on fashion models and the golden ratio to describe a beautiful face. <em>Aesthetic Plastic Surgery</em>, 32(2), 200&ndash;208. <a href="https://doi.org/10.1007/s00266-007-9080-z" target="_blank" rel="noopener">doi:10.1007/s00266-007-9080-z</a></li>
+      <li>Schmid, K., Marx, D., &amp; Samal, A. (2008). Computation of a face attractiveness index based on neoclassical canons, symmetry, and golden ratios. <em>Pattern Recognition</em>, 41(9), 2710&ndash;2717. <a href="https://doi.org/10.1016/j.patcog.2007.11.022" target="_blank" rel="noopener">doi:10.1016/j.patcog.2007.11.022</a></li>
+      <li>Kiekens, R. M. A., Kuijpers-Jagtman, A. M., van&rsquo;t Hof, M. A., van&rsquo;t Hof, B. E., &amp; Maltha, J. C. (2008). Putative golden proportions as predictors of facial esthetics in adolescents. <em>American Journal of Orthodontics and Dentofacial Orthopedics</em>, 134(4), 480&ndash;483. <a href="https://doi.org/10.1016/j.ajodo.2006.10.041" target="_blank" rel="noopener">doi:10.1016/j.ajodo.2006.10.041</a></li>
+      <li>Pallett, P. M., Link, S., &amp; Lee, K. (2010). New &ldquo;golden&rdquo; ratios for facial beauty. <em>Vision Research</em>, 50(2), 149&ndash;154. <a href="https://doi.org/10.1016/j.visres.2009.11.003" target="_blank" rel="noopener">doi:10.1016/j.visres.2009.11.003</a></li>
+      <li>Prokopakis, E. P., Vlastos, I. M., Picavet, V. A., Nolst Trenit&eacute;, G., Thomas, R., Cingi, C., et al. (2013). The golden ratio in facial symmetry. <em>Rhinology</em>, 51(1), 18&ndash;21. <a href="https://doi.org/10.4193/Rhino12.111" target="_blank" rel="noopener">doi:10.4193/Rhino12.111</a></li>
+      <li>Rossetti, A., De Menezes, M., Rosati, R., Ferrario, V. F., &amp; Sforza, C. (2013). The role of the golden proportion in the evaluation of facial esthetics. <em>The Angle Orthodontist</em>, 83(5), 801&ndash;808. <a href="https://doi.org/10.2319/111812-883.1" target="_blank" rel="noopener">doi:10.2319/111812-883.1</a></li>
+      <li>Packiriswamy, V., Kumar, P., &amp; Rao, M. (2012). Identification of facial shape by applying golden ratio to the facial measurements: An interracial study in Malaysian population. <em>North American Journal of Medical Sciences</em>, 4(11), 624&ndash;629. <a href="https://doi.org/10.4103/1947-2714.104312" target="_blank" rel="noopener">doi:10.4103/1947-2714.104312</a></li>
+      <li>Alam, M. K., Mohd Noor, N. F., Basri, R., Yew, T. F., &amp; Wen, T. H. (2015). Multiracial facial golden ratio and evaluation of facial appearance. <em>PLOS ONE</em>, 10(11), e0142914. <a href="https://doi.org/10.1371/journal.pone.0142914" target="_blank" rel="noopener">doi:10.1371/journal.pone.0142914</a></li>
+      <li>Bronstad, P. M., Langlois, J. H., &amp; Russell, R. (2008). Computational models of facial attractiveness judgments. <em>Perception</em>, 37(1), 126&ndash;142. <a href="https://doi.org/10.1068/p5805" target="_blank" rel="noopener">doi:10.1068/p5805</a></li>
+      <li>Menzel, C., Hayn-Leichsenring, G. U., Langner, O., Wiese, H., &amp; Redies, C. (2015). Fourier power spectrum characteristics of face photographs: Attractiveness perception depends on low-level image properties. <em>PLOS ONE</em>, 10(4), e0122801. <a href="https://doi.org/10.1371/journal.pone.0122801" target="_blank" rel="noopener">doi:10.1371/journal.pone.0122801</a></li>
+      <li>Zwahlen, R. A., Tang, A. T. H., Leung, W. K., &amp; Tan, S. K. (2022). Does 3-dimensional facial attractiveness relate to golden ratio, neoclassical canons, &lsquo;ideal&rsquo; ratios and &lsquo;ideal&rsquo; angles? <em>Maxillofacial Plastic and Reconstructive Surgery</em>, 44, 28. <a href="https://doi.org/10.1186/s40902-022-00358-2" target="_blank" rel="noopener">doi:10.1186/s40902-022-00358-2</a></li>
+      <li>Londono, J., Ghasmi, S., Lawand, G., Mirzaei, F., Akbari, F., &amp; Dashti, M. (2024). Assessment of the golden proportion in natural facial esthetics: A systematic review. <em>Journal of Prosthetic Dentistry</em>, 131(5), 804&ndash;810. <a href="https://doi.org/10.1016/j.prosdent.2022.04.026" target="_blank" rel="noopener">doi:10.1016/j.prosdent.2022.04.026</a></li>
+    </ol>
+  </div>
+</section>
+
+<section class="band" id="faq">
+  <div class="wrap">
+    <div class="shead">
+      <span class="kicker">Questions</span>
+      <h2>Things people ask</h2>
+    </div>
+    <div style="max-width:78ch">
+      <details class="faq" open>
+        <summary>Does a high score mean I am attractive?</summary>
+        <p>No, and we would rather say so than dress it up. The score summarises how closely ten
+        measurements sit on their targets. Attractiveness research points somewhere else entirely:
+        averageness, symmetry, and cues about health and youth. A face can score well here and
+        still not be the face you are used to seeing in the mirror, and the reverse happens too.</p>
+      </details>
+      <details class="faq">
+        <summary>Is my photo uploaded anywhere?</summary>
+        <p>No. The detection model is fetched from a public CDN and then runs inside this page.
+        Your image is decoded in the browser, measured, drawn on a canvas, and discarded. There is no
+        server to send it to, no account, and no analytics on your file.</p>
+      </details>
+      <details class="faq">
+        <summary>Which photo gives the best result?</summary>
+        <p>A clear, front-facing shot with even light and a neutral expression. Hair out of the way,
+        no heavy filters, and nothing covering the chin or the eyebrows. If the head is tilted, the
+        measurements are corrected for the tilt of the eye line, but a strongly angled face is still
+        harder to measure than a straight one.</p>
+      </details>
+      <details class="faq">
+        <summary>How accurate are the numbers?</summary>
+        <p>Every landmark is an estimate from a 2D photograph, so treat the third decimal place as
+        noise. The measurements are internally consistent and repeatable on the same photo, which
+        is what makes them useful, but they are not measurements to three significant figures. They
+        also cannot see depth: a face photographed from slightly off-axis will have its apparent
+        proportions distorted, and no amount of landmark detection fixes that.</p>
+      </details>
+      <details class="faq">
+        <summary>Why do most faces land in the middle of the scale?</summary>
+        <p>Because real faces do. The scoring is deliberately unforgiving at the edges: a ratio
+        50% away from its target contributes nothing, and a face that misses on every ratio
+        cannot score high. A score in the seventies means &ldquo;proportionally ordinary, nothing
+        extreme&rdquo;, which is a good description of most faces.</p>
+      </details>
+      <details class="faq">
+        <summary>Does the golden ratio work for every ethnicity?</summary>
+        <p>The measurements do. The interpretation does not. Studies in Malaysian, multiracial,
+        Indian and Chinese populations find that the proportions treated as &ldquo;golden&rdquo;
+        differ between populations, and a 2024 systematic review found no significant association
+        between the golden ratio and facial evaluation scores across ethnicities. A number is not
+        a standard of beauty.</p>
+      </details>
+      <details class="faq">
+        <summary>Where do the twenty sample portraits come from?</summary>
+        <p>CelebA-HQ, the high-quality version of the CelebA face dataset, served through a public
+        Hugging Face mirror. They are used here so you can see the tool work before you upload
+        anything of your own.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="band alt">
+  <div class="wrap">
+    <p class="closing">
+      <b>Measure the geometry, keep the judgement.</b> The proportions are a way of looking at a
+      face closely, and a good deal of fun to compare with other people. They are not a score
+      card, and the research is honest about that.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <b>Golden Face Ratio</b><br>
+      Landmark detection by Google MediaPipe Face Mesh. Sample photos from CelebA-HQ.
+    </div>
+    <div>
+      <b>Privacy</b> &mdash; everything runs in your browser; your photo is never uploaded.<br>
+      <b>Disclaimer</b> &mdash; a geometric snapshot, not a beauty grade or a medical assessment.
+    </div>
+  </div>
+</footer>
+
+<input type="file" id="file" accept="image/*" hidden>
+<script type="module">
+const $ = id => document.getElementById(id);
+const stage = $('stage'), canvas = $('canvas'), ctx = canvas.getContext('2d');
+const drop = $('drop'), loading = $('loading'), fileInput = $('file');
+
+const CELEBA = 'https://huggingface.co/datasets/harpreetsahota/celebamask-hq/resolve/main/data/';
+const celebUrl = i => `${CELEBA}data_${Math.floor(i/1000)}/${i}.jpg`;
+
+const SAMPLES = [
+  ['CelebA-HQ 0000', celebUrl(0)],
+  ['CelebA-HQ 0042', celebUrl(42)],
+  ['CelebA-HQ 0137', celebUrl(137)],
+  ['CelebA-HQ 0268', celebUrl(268)],
+  ['CelebA-HQ 0391', celebUrl(391)],
+  ['CelebA-HQ 0512', celebUrl(512)],
+  ['CelebA-HQ 0673', celebUrl(673)],
+  ['CelebA-HQ 0815', celebUrl(815)],
+  ['CelebA-HQ 0947', celebUrl(947)],
+  ['CelebA-HQ 1024', celebUrl(1024)],
+  ['CelebA-HQ 1433', celebUrl(1433)],
+  ['CelebA-HQ 1899', celebUrl(1899)],
+  ['CelebA-HQ 2356', celebUrl(2356)],
+  ['CelebA-HQ 2871', celebUrl(2871)],
+  ['CelebA-HQ 3390', celebUrl(3390)],
+  ['CelebA-HQ 4455', celebUrl(4455)],
+  ['CelebA-HQ 5678', celebUrl(5678)],
+  ['CelebA-HQ 7123', celebUrl(7123)],
+  ['CelebA-HQ 8999', celebUrl(8999)],
+  ['CelebA-HQ 12345', celebUrl(12345)]
+];
+// grid thumbs reuse the same URL (HF mirror serves CORS-enabled jpegs)
+const thumb = u => u;
+
+// build sample grid
+const samplesBox = $('samples');
+for (const [name, url] of SAMPLES){
+  const img = document.createElement('img');
+  img.crossOrigin = 'anonymous';
+  img.loading = 'lazy'; img.decoding = 'async';
+  img.src = thumb(url); img.alt = name; img.title = name; img.dataset.url = url;
+  img.tabIndex = 0; img.setAttribute('role', 'button');
+  img.addEventListener('click', () => loadSample(url, img));
+  img.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); loadSample(url, img); }
+  });
+  samplesBox.appendChild(img);
+}
+let selSample = null;
+function loadSample(url, el){
+  if (selSample){ selSample.classList.remove('sel'); }
+  el.classList.add('sel'); selSample = el;
+  const use = (image) => { STATE.img = image; run(); };
+  if (el.complete && el.naturalWidth > 0) use(el);
+  else {
+    el.onload = () => use(el);
+    el.onerror = () => { el.classList.remove('sel'); selSample = null;
+      alert('Could not load sample image. Check your connection.'); };
+  }
+}
+
+const STATE = { img:null, marks:null, an:null, srcW:0, srcH:0, view:null, dpr:1 };
+const READY = { promise:null, marker:null };
+
+function getMarker(){
+  if (READY.marker) return Promise.resolve(READY.marker);
+  if (!READY.promise){
+    READY.promise = (async () => {
+      const { FaceLandmarker, FilesetResolver } = await import(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+      READY.marker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions:{ modelAssetPath:
+          "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task" },
+        runningMode:"IMAGE", numFaces:1
+      });
+      return READY.marker;
+    })();
+    READY.promise.catch(() => { READY.promise = null; });
+  }
+  return READY.promise;
+}
+
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadLocal(e.target.files[0]); });
+$('pickBtn').onclick = () => fileInput.click();
+drop.onclick = () => fileInput.click();
+stage.addEventListener('dragover', e => e.preventDefault());
+stage.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadLocal(f);
+});
+$('maskTgl').addEventListener('change', draw);
+$('outlineTgl').addEventListener('change', draw);
+$('resetBtn').onclick = reset;
+
+function reset(){
+  STATE.img = null; STATE.marks = null; STATE.an = null; STATE.view = null;
+  canvas.style.display = 'none'; drop.style.display = 'flex';
+  $('resetBtn').style.display = 'none';
+  fileInput.value = '';
+  if (selSample){ selSample.classList.remove('sel'); selSample = null; }
+  for (const id of ['scoreCard','resCard','legendCard']) $(id).style.display = 'none';
+  $('scoreNum').textContent = '--';
+  $('scoreBar').style.width = '0%';
+  $('verdict').textContent = '';
+}
+
+function loadLocal(f){
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => { STATE.img = img; run(); setTimeout(() => URL.revokeObjectURL(url), 0); };
+  img.onerror = () => { URL.revokeObjectURL(url); alert('Could not load image.'); };
+  img.src = url;
+}
+
+async function run(){
+  // detect on an offscreen canvas; landmarks are kept in source-image pixels
+  const img = STATE.img;
+  const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+  if (!sw || !sh){ alert('Could not read the image size.'); return; }
+  STATE.srcW = sw; STATE.srcH = sh;
+
+  const s = Math.min(1024/Math.max(sw, sh), 4);
+  const dw = Math.max(1, Math.round(sw*s)), dh = Math.max(1, Math.round(sh*s));
+  const work = document.createElement('canvas');
+  work.width = dw; work.height = dh;
+  work.getContext('2d').drawImage(img, 0, 0, dw, dh);
+
+  drop.style.display = 'none';
+  $('resetBtn').style.display = 'block';
+  busy('Analyzing (first run downloads the model)...', true);
+  let res;
+  try {
+    res = (await getMarker()).detect(work);
+  } catch(e){
+    busy('', false);
+    alert('Could not run face detection. Check your internet connection and try again.');
+    return;
+  }
+  busy('', false);
+  if (!res.faceLandmarks?.length){
+    alert('No face detected. Use a clear, front-facing photo.');
+    return;
+  }
+  STATE.marks = res.faceLandmarks[0];
+  STATE.an = analyze();
+  canvas.style.display = 'block';
+  render(STATE.an);
+  fitCanvas();
+}
+
+// canvas bitmap matches the stage box; crop window is chosen to keep the face framed
+function fitCanvas(){
+  if (!STATE.img || !STATE.marks) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cw = Math.max(1, stage.clientWidth), ch = Math.max(1, stage.clientHeight);
+  const bw = Math.max(1, Math.round(cw*dpr)), bh = Math.max(1, Math.round(ch*dpr));
+  if (canvas.width !== bw || canvas.height !== bh){ canvas.width = bw; canvas.height = bh; }
+  STATE.dpr = dpr;
+  computeView(bw, bh);
+  draw();
+}
+
+function faceBox(){
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  for (const i of FACE_OVAL){
+    const p = P(i);
+    if (p.x<x0) x0=p.x; if (p.y<y0) y0=p.y;
+    if (p.x>x1) x1=p.x; if (p.y>y1) y1=p.y;
+  }
+  return { x0, y0, x1, y1, w:x1-x0, h:y1-y0, cx:(x0+x1)/2, cy:(y0+y1)/2 };
+}
+
+function computeView(bw, bh){
+  const sw = STATE.srcW, sh = STATE.srcH;
+  const scale = Math.max(bw/sw, bh/sh);        // cover: image fills the box, no stretch
+  const winW = bw/scale, winH = bh/scale;      // visible source window in source pixels
+  const fb = faceBox();
+  const pad = fb.h*0.08;
+  let oy;
+  if (winH >= fb.h + 2*pad) oy = fb.cy - winH/2;   // whole face fits: centre it
+  else oy = fb.y1 + pad - winH;                    // too tall: keep the chin, crop the forehead
+  oy = Math.min(Math.max(oy, 0), Math.max(0, sh-winH));
+  let ox = fb.cx - winW/2;
+  ox = Math.min(Math.max(ox, 0), Math.max(0, sw-winW));
+  STATE.view = { scale, ox, oy, winW, winH, bw, bh };
+}
+
+const mapP = p => { const v = STATE.view; return {x:(p.x-v.ox)*v.scale, y:(p.y-v.oy)*v.scale}; };
+
+// the stage box can change (window resize, layout shift): recompute the crop and redraw
+const ro = new ResizeObserver(() => fitCanvas());
+ro.observe(stage);
+window.addEventListener('resize', fitCanvas);
+
+function busy(msg, on){
+  loading.style.display = on ? 'block' : 'none';
+  if (msg) loading.innerHTML = '<span class="spin"></span>' + msg;
+}
+
+// landmarks are normalised by MediaPipe; convert to source-image pixels
+const P = i => { const l = STATE.marks[i]; return {x:l.x*STATE.srcW, y:l.y*STATE.srcH}; };
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const mid = (a,b) => ({x:(a.x+b.x)/2, y:(a.y+b.y)/2});
+const lerp = (a,b,t) => ({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t});
+const rot = (p, c, ang) => {
+  const s = Math.sin(ang), co = Math.cos(ang), dx = p.x-c.x, dy = p.y-c.y;
+  return {x: c.x + dx*co - dy*s, y: c.y + dx*s + dy*co};
+};
+
+const FACE_OVAL = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,
+  378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67];
+
+// one source of truth: the ten measurements, their targets and their descriptions
+const MEASURES = [
+  { name:'Face length : width', short:'face length to width', target:'1.618', hint:'golden ratio', ideal:1.618,
+    desc:'How tall the face is against its own width.',
+    val:m => m.faceLen/m.faceWid },
+  { name:'Nose length : width', short:'nose length to width', target:'1.618', hint:'golden ratio', ideal:1.618,
+    desc:'The length of the nose measured against its width.',
+    val:m => m.noseLen/m.noseW },
+  { name:'Mouth : nose width', short:'mouth to nose width', target:'1.618', hint:'golden ratio', ideal:1.618,
+    desc:'Mouth width compared with nose width.',
+    val:m => m.mouthW/m.noseW },
+  { name:'Nose to lip : lip to chin', short:'the lower third split', target:'1.000', hint:'equal halves', ideal:1,
+    desc:'The lower third divided into two even parts.',
+    val:m => m.lipNose/m.chinLip },
+  { name:'Vertical thirds (even)', short:'the vertical thirds', target:'1.000', hint:'equal thirds', ideal:1,
+    desc:'The middle and lower sections of the face, from the brow to the nose base and from the nose base to the chin.',
+    val:m => m.midface/m.lowerFace },
+  { name:'Facial fifths (even)', short:'the facial fifths', target:'1.000', hint:'equal fifths', ideal:1,
+    desc:'Each eye should span about one fifth of the width of the face.',
+    val:m => m.eyeFifth },
+  { name:'Eye gap : eye width', short:'eye gap to eye width', target:'1.000', hint:'equal', ideal:1,
+    desc:'The gap between the eyes against the width of one eye.',
+    val:m => m.eyeGap/((m.eyeWLeft+m.eyeWRight)/2) },
+  { name:'Upper lip : lower lip', short:'the lip split', target:'0.618', hint:'golden section', ideal:0.618,
+    desc:'The golden section in miniature, 0.618.',
+    val:m => m.upperLip/m.lowerLip },
+  { name:'Left : right eye width', short:'eye symmetry', target:'1.000', hint:'equal', ideal:1,
+    desc:'A symmetry check on the two eyes.',
+    val:m => Math.min(m.eyeWLeft,m.eyeWRight)/Math.max(m.eyeWLeft,m.eyeWRight) },
+  { name:'Left : right face half', short:'facial symmetry', target:'1.000', hint:'equal', ideal:1,
+    desc:'A symmetry check across the jaw and cheeks. A head turned away from the camera will read uneven here even when the face is symmetric.',
+    val:m => Math.min(m.halfL,m.halfR)/Math.max(m.halfL,m.halfR) }
+];
+
+function analyze(){
+  const top = P(10), chin = P(152), nose = P(2), nasion = P(168);
+  const faceL = P(234), faceR = P(454);
+  const eyeLo = P(33), eyeLi = P(133), eyeRi = P(362), eyeRo = P(263);
+  const mouthL = P(61), mouthR = P(291);
+  const noseWL = P(48), noseWR = P(278);
+  const lipTop = P(0), lipMid = P(13), lipBot = P(17), lipInnerLow = P(14);
+  const brow = mid(P(105), P(334));
+  const eyeC = mid(mid(eyeLo,eyeLi), mid(eyeRi,eyeRo));
+  const faceC = mid(top, chin);
+
+  // rotate by eye-line angle so a tilted head doesn't skew measurements
+  const ang = Math.atan2(eyeRo.y - eyeLo.y, eyeRo.x - eyeLo.x);
+  const R = p => rot(p, faceC, -ang);
+
+  const rTop = R(top), rBrow = R(brow), rNose = R(nose), rChin = R(chin);
+  const rNasion = R(nasion), rFaceC = R(faceC), rEyeC = R(eyeC);
+  const rFaceL = R(faceL), rFaceR = R(faceR);
+  const rMouthL = R(mouthL), rMouthR = R(mouthR);
+  const rNwl = R(noseWL), rNwr = R(noseWR);
+  const rLipTop = R(lipTop), rLipMid = R(lipMid), rLipBot = R(lipBot), rLipInnerLow = R(lipInnerLow);
+
+  // face axes in rotated space
+  const v = {x: rChin.x-rTop.x, y: rChin.y-rTop.y};
+  const vpn = Math.hypot(v.x, v.y) || 1;
+  const u = {x: v.x/vpn, y: v.y/vpn};            // vertical axis
+  const rl = {x: u.y, y: -u.x};                  // lateral axis
+  if ((rFaceR.x-rFaceC.x)*rl.x + (rFaceR.y-rFaceC.y)*rl.y < 0) rl.x=-rl.x, rl.y=-rl.y;
+  const perp = p => Math.abs((p.x-rFaceC.x)*rl.x + (p.y-rFaceC.y)*rl.y); // lateral distance from axis
+  const down = p => (p.x-rTop.x)*u.x + (p.y-rTop.y)*u.y;                   // position along the face axis
+
+  const faceLen = vpn;
+  const faceWid = dist(rFaceL, rFaceR);
+  const noseW   = dist(rNwl, rNwr);
+  const yBrow = down(rBrow), yNose = down(rNose), yChin = down(rChin), yLipBot = down(rLipBot);
+  const thirds = [yBrow, yNose-yBrow, yChin-yNose];
+  const fifths  = [
+    dist(rFaceL, R(eyeLo)), dist(R(eyeLo), R(eyeLi)),
+    dist(R(eyeLi), R(eyeRi)), dist(R(eyeRi), R(eyeRo)),
+    dist(R(eyeRo), rFaceR)
+  ];
+  const lipNose = yLipBot - yNose;
+  const chinLip = yChin - yLipBot;
+  const upperLip = Math.abs(down(rLipMid) - down(rLipTop));
+  const lowerLip = Math.abs(down(rLipBot) - down(rLipInnerLow));
+  const eyeWLeft  = dist(eyeLo, eyeLi);
+  const eyeWRight = dist(eyeRi, eyeRo);
+  const halfL = perp(rFaceL), halfR = perp(rFaceR);
+
+  const g = (cur, ideal) => ({ cur, ideal, off: Math.abs(cur-ideal)/ideal });
+  const m = { faceLen, faceWid, noseW, mouthW: dist(rMouthL, rMouthR),
+              noseLen: yNose - down(rNasion), lipNose, chinLip, upperLip, lowerLip,
+              midface: yNose - yBrow, lowerFace: yChin - yNose,
+              eyeFifth: 5*((eyeWLeft + eyeWRight)/2)/faceWid,
+              eyeWLeft, eyeWRight, eyeGap: dist(R(eyeLi), R(eyeRi)),
+              halfL, halfR, thirds, fifths };
+  return {
+    items: MEASURES.map(s => ({ name:s.name, short:s.short, note:s.desc, v:g(s.val(m), s.ideal) })),
+    grid: { faceC:rFaceC, eyeC:rEyeC, top:rTop, brow:rBrow, nose:rNose, chin:rChin,
+            mouthL:rMouthL, mouthR:rMouthR, nwl:rNwl, nwr:rNwr,
+            faceW: faceWid, faceLen,
+            outline: FACE_OVAL.map(i => R(P(i))),
+            u, rl }
+  };
+}
+
+function score(items){
+  // 100% at ideal, linear falloff: 50% deviation = 0
+  const s = items.map(x => Math.max(0, 1 - x.v.off/0.5));
+  return Math.round(s.reduce((a,b)=>a+b,0)/s.length*100);
+}
+
+function idealTxt(val){
+  if (val === 0.618) return 'ideal 0.618';
+  if (val === 1) return 'ideal 1.000';
+  return 'ideal 1.618';
+}
+
+function render(an){
+  $('scoreCard').style.display = 'block';
+  $('resCard').style.display = 'block';
+  $('legendCard').style.display = 'block';
+  const pct = score(an.items);
+  $('scoreNum').textContent = pct+'%';
+  const bar = $('scoreBar');
+  bar.style.width = pct+'%';
+  bar.style.background = pct>70 ? 'var(--ok)' : pct>45 ? 'var(--warn)' : 'var(--bad)';
+
+  const box = $('ratios');
+  box.innerHTML = '';
+  for (const it of an.items){
+    const color = it.v.off<0.06 ? 'var(--ok)' : it.v.off<0.15 ? 'var(--warn)' : 'var(--bad)';
+    const fill = Math.max(5, Math.round(100 - it.v.off*250));
+    box.insertAdjacentHTML('beforeend',
+      `<div class="ratio">
+        <div class="rhead">
+          <span>${it.name}</span>
+          <span class="val">${it.v.cur.toFixed(3)} &middot; <b style="color:${color}">${idealTxt(it.v.ideal)}</b></span>
+        </div>
+        <div class="rbar"><i style="width:${fill}%; background:${color}"></i></div>
+        <div class="rnote">${it.note}</div>
+      </div>`);
+  }
+
+  const byOff = [...an.items].sort((a,b) => a.v.off - b.v.off);
+  const best = byOff[0], worst = byOff[byOff.length-1];
+  $('verdict').textContent =
+    `Closest to its target: ${best.short}. Furthest away: ${worst.short}.`;
+}
+
+// the "what we measure" cards come from the same list the analysis uses
+function buildMeasureCards(items){
+  const grid = $('measureGrid');
+  for (const it of items){
+    grid.insertAdjacentHTML('beforeend',
+      `<div class="mcard">
+        <div class="t">${it.name}</div>
+        <h4>${it.short}</h4>
+        <p>${it.desc}</p>
+        <span class="target">Target: <b>${it.target}</b> &middot; ${it.hint}</span>
+      </div>`);
+  }
+}
+buildMeasureCards(MEASURES);
+
+function draw(){
+  if (!STATE.img || !STATE.marks || !STATE.an || !STATE.view) return;
+  const v = STATE.view, d = STATE.dpr || 1;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(STATE.img, v.ox, v.oy, v.winW, v.winH, 0, 0, v.bw, v.bh);
+  const g = STATE.an.grid;
+  const gold = 'rgba(169,124,29,.9)', dim = 'rgba(77,71,60,.5)';
+  ctx.lineCap = 'round';
+
+  const line = (a, b, c, w) => {
+    const p1 = mapP(a), p2 = mapP(b);
+    ctx.strokeStyle = c; ctx.lineWidth = (w || 1.5)*d;
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  };
+
+  if ($('outlineTgl').checked){
+    ctx.strokeStyle = dim; ctx.lineWidth = 1.5*d;
+    ctx.beginPath();
+    g.outline.forEach((p, i) => { const q = mapP(p); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); });
+    ctx.closePath(); ctx.stroke();
+  }
+
+  if (!$('maskTgl').checked) return;
+
+  const { u, rl, faceW, faceLen, faceC } = g;
+  const fw = faceW/2;
+  const at = (p, lat) => ({x: p.x + rl.x*lat, y: p.y + rl.y*lat});
+
+  // center axis along face
+  line({x: faceC.x - u.x*faceLen*0.62, y: faceC.y - u.y*faceLen*0.62},
+       {x: faceC.x + u.x*faceLen*0.62, y: faceC.y + u.y*faceLen*0.62}, gold, 1.6);
+
+  // vertical thirds
+  ctx.setLineDash([5*d, 4*d]);
+  for (const p of [g.brow, g.nose]) line(at(p,-fw), at(p, fw), gold, 1.2);
+  ctx.setLineDash([]);
+
+  // phi lines (38.2% / 61.8% of face length from top)
+  for (const f of [0.382, 0.618]){
+    const p = lerp(g.top, g.chin, f);
+    line(at(p,-fw), at(p, fw), 'rgba(169,124,29,.45)', 1);
+  }
+
+  // facial fifths (vertical boundaries at ±10%,30%,50% of face width)
+  ctx.strokeStyle = dim; ctx.lineWidth = 1*d;
+  ctx.setLineDash([2*d, 3*d]);
+  for (const f of [-0.5,-0.3,-0.1,0.1,0.3,0.5]){
+    const half = faceLen*0.62;
+    line({x: faceC.x + rl.x*faceW*f - u.x*half, y: faceC.y + rl.y*faceW*f - u.y*half},
+         {x: faceC.x + rl.x*faceW*f + u.x*half, y: faceC.y + rl.y*faceW*f + u.y*half}, dim, 1);
+  }
+  ctx.setLineDash([]);
+
+  // nose and mouth width
+  line(g.nwl, g.nwr, dim, 1.3);
+  line(g.mouthL, g.mouthR, dim, 1.3);
+
+  // face width label (screen pixels)
+  const np = mapP(g.nose);
+  ctx.font = `${11*d}px ui-monospace, monospace`;
+  ctx.fillStyle = 'rgba(169,124,29,.95)';
+  ctx.fillText('width '+Math.round(faceW*v.scale/d)+'px', np.x + 8*d, np.y - 10*d);
+}
+</script>
+</body>
+</html>
