@@ -6,7 +6,7 @@ neoclassical canons. Everything runs on the visitor's device; no photo is upload
 
 This project is a Next.js App Router port of the original single-file page in
 `reference/index.html`. The whole site is statically generated (`output: "export"`) and is
-ready to deploy to Cloudflare Pages on the free plan.
+ready to deploy to Cloudflare Workers (static assets) on the free plan.
 
 ## Stack
 
@@ -36,24 +36,31 @@ npm run preview
 The export is written to `out/`. `npm run preview` serves that folder at
 <http://localhost:3000> with `serve`.
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare Workers
 
 The output is plain static files. Any static host works, but this repo includes Cloudflare
-Pages configuration.
+Workers configuration with static assets.
 
 ### Option 1: Git integration (recommended)
 
 1. Push the repository to GitHub or GitLab.
-2. In the Cloudflare dashboard go to **Workers & Pages → Create → Pages → Connect to Git**.
-3. Select the repository and use these build settings:
-   - Framework preset: **Next.js (Static HTML Export)** (or None)
+2. In the Cloudflare dashboard go to **Workers & Pages → Create → Workers → Import a
+   repository** and select the repo.
+3. Use these build settings:
    - Build command: `npm run build`
-   - Build output directory: `out`
+   - Deploy command: `npx wrangler deploy`
 4. Add an environment variable `NODE_VERSION=22` (the build image also reads `.nvmrc` on
    recent images).
 5. Deploy.
 
-There is no server-side runtime, so no compatibility flags or Functions settings are needed.
+`wrangler.toml` sets `[assets] directory = "./out"`, so `wrangler deploy` uploads the
+static export directly. There is no Worker script, no server runtime, and no
+compatibility flags or bindings.
+
+Do not use Cloudflare Pages for this project: its build image runs an extra Pages-specific
+deploy step and `pages_build_output_dir` is not configured. If the project already exists
+as a Pages project, create a Worker instead or switch the deploy command to
+`npx wrangler pages deploy out --project-name golden-face-ratio`.
 
 ### Option 2: CLI (direct upload)
 
@@ -68,16 +75,16 @@ npm run deploy
 `npm run deploy` runs:
 
 ```bash
-wrangler pages deploy out --project-name golden-face-ratio
+wrangler deploy
 ```
 
-The first run creates the Pages project. Wrangler reads `wrangler.toml`, which already
-points at `out/`.
+The first run creates the Worker. Wrangler reads `wrangler.toml`, which already points at
+`out/` and serves `404.html` for missing paths.
 
 ### Headers
 
-`public/_headers` is copied to `out/_headers` and applied by Cloudflare Pages. It sets
-basic security headers and long-lived caching for `/_next/static/*`.
+`public/_headers` is copied to `out/_headers` and applied by Cloudflare Workers static
+assets. It sets basic security headers and long-lived caching for `/_next/static/*`.
 
 ## How it works
 

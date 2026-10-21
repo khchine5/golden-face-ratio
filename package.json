@@ -7,7 +7,7 @@
     "build": "next build",
     "preview": "serve out",
     "typecheck": "tsc --noEmit",
-    "deploy": "wrangler pages deploy out --project-name golden-face-ratio"
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "next": "16.4.2",
