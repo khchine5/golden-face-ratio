@@ -73,9 +73,10 @@ export default function FaqSection() {
           <details className="faq">
             <summary>Where do the twenty sample portraits come from?</summary>
             <p>
-              CelebA-HQ, the high-quality version of the CelebA face dataset,
-              served through a public Hugging Face mirror. They are used here so
-              you can see the tool work before you upload anything of your own.
+              CelebA-HQ, the high-quality version of the CelebA face dataset. The
+              twenty portraits are bundled with this site rather than loaded from
+              a third-party host. They are used here so you can see the tool work
+              before you upload anything of your own.
             </p>
           </details>
         </div>

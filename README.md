@@ -123,9 +123,10 @@ lib/
   analysis.ts        Landmark maths, view/crop calculation, scoring
   draw.ts            Canvas overlay renderer
   measures.ts        The ten measures, targets and descriptions
-  samples.ts         CelebA-HQ sample URLs
+  samples.ts         CelebA-HQ sample paths
 public/
-  _headers           Cloudflare Pages headers
+  samples/           Bundled sample portraits (CelebA-HQ)
+  _headers           Cloudflare headers
 reference/
   index.html         Original standalone version, kept for comparison
 ```
